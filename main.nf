@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 params.name             = "RNA-seq"
 params.email            = "cull0084@umn.edu"
-params.reads            = "home/jonahcullen/workshop/fastq/*{*_R1,*_R2}.fastq.gz"
+params.reads            = "/home/jonahcullen/workshop/fastq/*{*_R1,*_R2}.fastq.gz"
 
 
 
@@ -16,7 +16,7 @@ log.info "\n"
 
 annotation = Channel.fromPath("/home/jonahcullen/worksho/pannotation/*")
 genome = Channel.fromPath("/home/jonahcullen/workshop/genome/*")
-sample_info_for_de = Channel.fromPath("/home/jonahcullen/workshop/sample_info/*")
+sample_info = Channel.fromPath("/home/jonahcullen/workshop/sample_info/*")
 index = Channel.fromPath("/home/jonahcullen/workshop/index")
 reads = Channel.fromFilePairs(params.reads, size: -1)
   .ifEmpty { error "Can't find any reads matching: ${params.reads}" }
@@ -276,3 +276,23 @@ process multiqc {
     --cl_config "extra_fn_clean_exts: [ '_1', '_2' ]"
   """
 }
+
+process differential_expression {
+
+  publishDir "reports"
+
+  input:
+  file annotation from annotation_for_de
+  file salmon from salmon_for_de.collect()
+  file sample_info from sample_info
+
+  output:
+  file "*.html"
+
+  script:
+  """
+  cp ${baseDir}/bin/*.R* .
+  Rscript -e 'rmarkdown::render("differential_expression.Rmd", params = list(annotation_file = "${annotation}"))'
+  """
+}
+
